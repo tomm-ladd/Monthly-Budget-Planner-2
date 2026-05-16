@@ -1162,15 +1162,13 @@ function renderPlan() {
 
   if(slices.length && (totalPlannedCats > 0 || unallocVal > 0)) {
     const sliceTotal = slices.reduce((s,sl)=>s+sl.val,0)||1;
-    pieWrap.innerHTML=`<div class="pie-wrap"><canvas id="planPieC" width="130" height="130"></canvas><div class="legend" id="planPieLeg"></div></div>`;
-    // wait for DOM
+    pieWrap.innerHTML=`<div style="display:flex;justify-content:center"><canvas id="planPieC" width="200" height="200"></canvas></div>`;
     requestAnimationFrame(()=>{
       const canvas = document.getElementById('planPieC');
       if(!canvas) return;
       const ctx = canvas.getContext('2d');
-      const cx=65, cy=65, r=58, ir=28;
+      const cx=100, cy=100, r=92, ir=42;
       let angle = -Math.PI/2;
-      // draw slices
       slices.forEach(sl=>{
         const sweep = (sl.val/sliceTotal)*Math.PI*2;
         ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,angle,angle+sweep); ctx.closePath();
@@ -1180,24 +1178,22 @@ function renderPlan() {
       // donut hole
       ctx.beginPath(); ctx.arc(cx,cy,ir,0,Math.PI*2);
       ctx.fillStyle = document.body.classList.contains('light')?'#ffffff':'#14141a'; ctx.fill();
-      // draw emoji on each slice (only if slice is large enough)
+      // emoji labels on slices
       angle = -Math.PI/2;
       slices.forEach(sl=>{
         const sweep = (sl.val/sliceTotal)*Math.PI*2;
-        if(sweep > 0.25 && sl.icon && sl.icon !== '○') {
+        if(sweep > 0.2 && sl.icon && sl.icon !== '○') {
           const mid = angle + sweep/2;
           const emojiR = (r + ir) / 2;
           const ex = cx + Math.cos(mid) * emojiR;
           const ey = cy + Math.sin(mid) * emojiR;
-          ctx.font = '13px serif';
+          ctx.font = '16px serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(sl.icon, ex, ey);
         }
         angle += sweep;
       });
-      const leg = document.getElementById('planPieLeg');
-      if(leg) leg.innerHTML = slices.map(sl=>`<div class="legend-row"><div class="legend-dot" style="background:${sl.color}"></div><div class="legend-name">${sl.name}</div><div class="legend-amt">${((sl.val/sliceTotal)*100).toFixed(0)}%</div></div>`).join('');
     });
   } else {
     pieWrap.innerHTML='<div style="color:var(--sub);font-size:12px">Add categories with limits and salary to see your budget allocation.</div>';
@@ -1206,6 +1202,7 @@ function renderPlan() {
   // plan list
   const el = document.getElementById('plan-list');
   if(!D.categories.length){ el.innerHTML='<div class="empty-state" style="padding:24px 0"><div class="ei">📋</div><p>No categories yet.<br>Tap <strong>+ Add Category</strong>.</p></div>'; return; }
+  const totalForPct = [...D.categories].reduce((s,c)=>s+(c.limit||0),0)||1;
   el.innerHTML = [...D.categories]
     .sort((a,b) => {
       if(a.system && !b.system) return 1;
@@ -1214,10 +1211,12 @@ function renderPlan() {
     })
     .map(cat=>{
     const limit = cat.limit||0;
+    const pct = limit>0 ? Math.round((limit/totalForPct)*100) : 0;
     return `<div class="plan-row" data-catid="${cat.id}">
       <div class="plan-icon" onclick="openEditCat(this.closest('.plan-row').dataset.catid)">${cat.icon}</div>
       <div class="plan-info">
         <div class="plan-name">${cat.name}${cat.system?` <span style="font-size:10px;color:var(--sub);font-weight:500">→ ${cat.key==='__savings__'?'Savings tab':'Investments tab'}</span>`:''}</div>
+        ${pct>0?`<div style="font-size:10.5px;color:var(--sub);margin-top:2px">${pct}% of income</div>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
         <span style="font-size:13px;color:var(--sub);font-weight:600">£</span>
